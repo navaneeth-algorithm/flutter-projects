@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'constants.dart';
-import 'DateTimeNow.dart';
 import 'attendance_entry_button.dart';
 
 class EmployeeAttendence extends StatefulWidget {
@@ -17,7 +18,7 @@ class EmployeeAttendence extends StatefulWidget {
 
 class _EmployeeAttendenceState extends State<EmployeeAttendence> {
   String entryButtonText = '';
-  DateTimeNow dateTimeNow = new DateTimeNow();
+  
 
   Future<String> getEntryExitCount(int entry) async {
     var url = baseUrl + 'get.php';
@@ -35,26 +36,28 @@ class _EmployeeAttendenceState extends State<EmployeeAttendence> {
     return entry == 1 ? data[0]["InCount"] : data[0]["OutCount"];
   }
 
-  void calculateAttendence() async {
-    var inValue = await getEntryExitCount(1);
-    print(inValue);
+  Future<String> buttonTextCalculate() async{
+
+     var inValue = await getEntryExitCount(1);
+    //print(inValue);
     var outValue = await getEntryExitCount(2);
-    print(outValue);
-
+    //print(outValue);
     if (int.parse(inValue) == int.parse(outValue)) {
-      setState(() {
-        this.entryButtonText = "IN";
-      });
 
-      this.setAttendence(1);
-    } else if (int.parse(inValue) > int.parse(outValue)) {
-      setState(() {
-        this.entryButtonText = "OUT";
-      });
+     return "IN";
 
-      this.setAttendence(2);
-    }
+      }
+      else if (int.parse(inValue) > int.parse(outValue)) {
+
+      return "OUT";
+      
+      }
+
+
+      return null;
+
   }
+ 
 
   dynamic setAttendence(int entry) async {
     var url = baseUrl + 'set.php';
@@ -71,9 +74,41 @@ class _EmployeeAttendenceState extends State<EmployeeAttendence> {
     return data;
   }
 
+   void calculateAttendence() async {
+  
+    if(this.entryButtonText=="IN"){
+      setState(() {
+        this.entryButtonText = "OUT";
+      });
+      
+     await this.setAttendence(1);
+
+     exit(0);
+     
+    }
+    else if(this.entryButtonText=="OUT"){
+      setState(() {
+        this.entryButtonText = "IN";
+      });
+      
+      await this.setAttendence(2);
+      exit(0);
+     
+    }
+  }
+
+  dynamic initialButton() async{
+
+    dynamic temp = await this.buttonTextCalculate();
+    setState(() {
+      this.entryButtonText = temp;
+    });
+    
+  }
+
   @override
   void initState() {
-    calculateAttendence();
+    initialButton();
     super.initState();
   }
 
@@ -81,7 +116,7 @@ class _EmployeeAttendenceState extends State<EmployeeAttendence> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("QM Time Sheet"),
+        title: Text(appBarName),
         centerTitle: true,
       ),
       body: Center(
@@ -89,7 +124,7 @@ class _EmployeeAttendenceState extends State<EmployeeAttendence> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Text("Logined by " + widget.clientName + " "),
+              Text("Logined by " + widget.clientName + " ",style: TextStyle(fontWeight: FontWeight.bold,fontSize: 24.0),),
               AttendanceEntryButton(
                 buttonText: this.entryButtonText,
                 onPressed: () {

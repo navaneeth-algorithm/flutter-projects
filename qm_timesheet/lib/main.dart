@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'inputfield_widget.dart';
+import 'package:qrscan/qrscan.dart' as scanner;
 import 'package:qm_timesheet/employee_attendence.dart';
 import 'constants.dart';
 
@@ -13,13 +13,14 @@ class QMTimeSheet extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text("QM Time Sheet"),
+          title: Text(appBarName),
           centerTitle: true,
         ),
         body: SafeArea(
           child: LoginModule(),
         ),
       ),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -37,17 +38,19 @@ class _LoginModuleState extends State<LoginModule> {
   String msg ='';
   String id = '';
   String employeeName = '';
+  
+  
 
-  Future<List> _login() async{
+
+  void  _login(String phonenumber,String password) async{
 
     var url = baseUrl+'get.php';
-    String phonenumber = phone.text;
-    String password = pass.text;
     http.Response response = await http.post(url, body:{
       "type":"Employee",
       "phonenumber": phonenumber,
       "password": password,
     });
+    print(response.body);
     var dataUser = json.decode(response.body);
     if (dataUser.length==0){
       
@@ -60,7 +63,7 @@ class _LoginModuleState extends State<LoginModule> {
      /* Navigator.pushReplacementNamed(context, '/uploadPage');*/
       id = dataUser[0]['Id'].toString();
       employeeName = dataUser[0]['Name'];
-    
+
      Navigator.push(
         context,
          new MaterialPageRoute(builder: (context) => new EmployeeAttendence(id: id, clientName: employeeName)),
@@ -69,6 +72,27 @@ class _LoginModuleState extends State<LoginModule> {
     
     }
 
+  }
+
+
+  Future _scan() async {
+    String barcode = await scanner.scan();
+    List userInfo = barcode.split(';');
+    //print(userInfo[0]);
+   // print(userInfo[1]);
+   if(userInfo.length!=0)
+    _login(userInfo[0],userInfo[1]);
+    else{
+      this.msg="Some Error Occured";
+    }
+    
+  }
+
+
+   @override
+  void initState() {
+    _scan();
+    super.initState();
   }
 
   @override
@@ -86,29 +110,10 @@ class _LoginModuleState extends State<LoginModule> {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            InputFieldWidget(
-              inputFieldIcon: Icon(Icons.phone),
-              hintText: "Enter your Phone Number",
-              controller: phone,
-              texttype: TextInputType.phone,
-              encodeCharacter: false,
-            ),
-            InputFieldWidget(
-              inputFieldIcon: Icon(Icons.lock),
-              hintText: "Enter Password",
-              controller: pass,
-              encodeCharacter: true,
-            ),
-            RaisedButton(
-              child: Text(
-                "Login",
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              onPressed: () {
-                _login();
+            RaisedButton(onPressed: (){
+              _scan();
               },
-              color: Colors.blueAccent[100],
+            child: Text("Scan"),
             ),
             Text(msg,style: TextStyle(color: Colors.red),)
           ],
